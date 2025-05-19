@@ -172,8 +172,8 @@ export const useGridData = (
       })
     }
 
-    // Return only the 6 most recent months
-    return allUniqueMonths.slice(0, 6).map((month: string, index: number) => {
+    // Return all available months (either 6 or 13 based on the toggle)
+    return allUniqueMonths.map((month: string, index: number) => {
       const monthName = getMonthNameByIndex(index + 1)
       return {
         month,

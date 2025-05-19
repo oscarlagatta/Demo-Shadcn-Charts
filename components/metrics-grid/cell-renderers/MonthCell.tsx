@@ -35,9 +35,9 @@ export const MonthCell: React.FC<ICellRendererParams> = ({ data, value, column }
   const formattedFraction = `${numerator}/${denominator}`
 
   return (
-    <div className="flex h-full flex-col items-center justify-center">
+    <div className="flex h-full flex-col items-center justify-center month-cell-content">
       <div
-        className="text-sm font-medium"
+        className="text-sm font-medium sm:text-xs"
         style={{
           color: isLightBg ? "#000000" : "#ffffff", // Black text for light backgrounds, white for dark
         }}
@@ -45,7 +45,7 @@ export const MonthCell: React.FC<ICellRendererParams> = ({ data, value, column }
         {formattedPercentage}
       </div>
       <div
-        className="text-xs font-medium"
+        className="text-xs font-medium sm:text-[10px]"
         style={{
           color: isLightBg ? "#000000" : "#d9d9d9", // Black text for light backgrounds, light gray for dark
         }}

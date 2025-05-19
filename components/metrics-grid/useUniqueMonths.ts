@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import type { MetricData } from "./types"
 
-export const useUniqueMonths = (sixMonthByMetricPerformance: MetricData[] | null) => {
+export const useUniqueMonths = (sixMonthByMetricPerformance: MetricData[] | null, showExtendedMonths = false) => {
   const [allUniqueMonths, setAllUniqueMonths] = useState<string[]>([])
 
   // Collect all unique months across all metrics
@@ -23,12 +23,12 @@ export const useUniqueMonths = (sixMonthByMetricPerformance: MetricData[] | null
         (a: string, b: string) => new Date(b).getTime() - new Date(a).getTime(),
       )
 
-      // Limit to only the 6 most recent months
-      const last6Months = sortedMonths.slice(0, 6)
+      // Limit to either 6 or 13 most recent months based on toggle
+      const limitedMonths = sortedMonths.slice(0, showExtendedMonths ? 13 : 6)
 
-      setAllUniqueMonths(last6Months)
+      setAllUniqueMonths(limitedMonths)
     }
-  }, [sixMonthByMetricPerformance])
+  }, [sixMonthByMetricPerformance, showExtendedMonths])
 
   return allUniqueMonths
 }

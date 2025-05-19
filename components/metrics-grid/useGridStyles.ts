@@ -66,6 +66,42 @@ export const useGridStyles = (isGridMounted: boolean) => {
     .ag-header-cell-menu-button:hover {
       opacity: 1;
     }
+    
+    /* Responsive styles for small screens */
+    @media (max-width: 768px) {
+      .ag-header-cell {
+        min-width: 80px !important;
+      }
+      
+      /* Make month columns more compact on small screens */
+      .month-column {
+        min-width: 80px !important;
+        max-width: 100px !important;
+      }
+      
+      /* Ensure the first two columns are always visible */
+      .ag-pinned-left-cols-container {
+        min-width: 200px !important;
+      }
+      
+      /* Improve text wrapping in headers */
+      .ag-header-cell-text {
+        white-space: normal !important;
+        line-height: 1.2 !important;
+        font-size: 0.75rem !important;
+      }
+      
+      /* Compact cell content */
+      .month-cell-content {
+        padding: 2px !important;
+      }
+      
+      /* Make the grid container horizontally scrollable */
+      .grid-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+      }
+    }
   `
     document.head.appendChild(styleElement)
 

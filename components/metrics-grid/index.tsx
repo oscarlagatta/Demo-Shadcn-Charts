@@ -14,6 +14,7 @@ import { useUniqueMonths } from "./useUniqueMonths"
 import { useGridData } from "./useGridData"
 import { useColumnDefs } from "./useColumnDefs"
 import { useGridStyles } from "./useGridStyles"
+import { MonthToggle } from "./MonthToggle"
 
 import "ag-grid-community/styles/ag-grid.css"
 import "ag-grid-community/styles/ag-theme-alpine.css"
@@ -25,6 +26,24 @@ const MetricsGrid: React.FC<MetricsGridProps> = ({ selectedMonth, selectedLeader
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isGridMounted, setIsGridMounted] = useState(false)
+  const [showExtendedMonths, setShowExtendedMonths] = useState(false)
+  const [isSmallScreen, setIsSmallScreen] = useState(false)
+
+  // Check screen size
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth < 768)
+    }
+
+    // Initial check
+    checkScreenSize()
+
+    // Add event listener for resize
+    window.addEventListener("resize", checkScreenSize)
+
+    // Cleanup
+    return () => window.removeEventListener("resize", checkScreenSize)
+  }, [])
 
   // Pass selectedLeader and selectedMonth to the useDashboardData hook
   const { sixMonthByMetricPerformance, useGetSltMetricPerformance, sixMonthByMetricPerformanceQuery } =
@@ -35,7 +54,7 @@ const MetricsGrid: React.FC<MetricsGridProps> = ({ selectedMonth, selectedLeader
     setExpandedMetrics([])
     setSelectedMetricId(null)
     setPendingAction(null)
-  }, [selectedLeader, selectedMonth, metricTypeId])
+  }, [selectedLeader, selectedMonth, metricTypeId, showExtendedMonths])
 
   // Pass selectedLeader and selectedMonth to the useGetSltMetricPerformance hook
   const { data: sltMetricPerformance, isLoading: isSltDataLoading } = useGetSltMetricPerformance(
@@ -52,8 +71,8 @@ const MetricsGrid: React.FC<MetricsGridProps> = ({ selectedMonth, selectedLeader
     setIsLoading(sixMonthByMetricPerformanceQuery.isLoading)
   }, [sixMonthByMetricPerformanceQuery.isLoading])
 
-  // Get all unique months
-  const allUniqueMonths = useUniqueMonths(sixMonthByMetricPerformance)
+  // Get all unique months, passing the showExtendedMonths flag
+  const allUniqueMonths = useUniqueMonths(sixMonthByMetricPerformance, showExtendedMonths)
 
   // Get grid data and month columns
   const { gridData, setGridData, monthColumns } = useGridData(
@@ -93,7 +112,7 @@ const MetricsGrid: React.FC<MetricsGridProps> = ({ selectedMonth, selectedLeader
     [expandedMetrics, pendingAction, isSltDataLoading],
   )
 
-  // Get column definitions
+  // Get column definitions, passing isSmallScreen
   const columnDefs = useColumnDefs(
     monthColumns,
     expandedMetrics,
@@ -102,6 +121,7 @@ const MetricsGrid: React.FC<MetricsGridProps> = ({ selectedMonth, selectedLeader
     handleToggleRow,
     pendingAction,
     metricPerformanceColors,
+    isSmallScreen,
   )
 
   // Default column definitions
@@ -159,26 +179,37 @@ const MetricsGrid: React.FC<MetricsGridProps> = ({ selectedMonth, selectedLeader
     }
   }, [])
 
+  // Handle toggle change
+  const handleToggleChange = useCallback((value: boolean) => {
+    setShowExtendedMonths(value)
+  }, [])
+
   // Show loading spinner if data is loading
   if (isLoading) {
     return renderLoadingSpinner()
   }
 
   return (
-    <div className="ag-theme-alpine w-full h-full">
-      <div className="w-full h-full overflow-auto scrollbar-hide">
-        <AgGridReact
-          key={`metrics-grid-${metricTypeId || "all"}`}
-          rowData={gridData}
-          columnDefs={columnDefs}
-          defaultColDef={defaultColDef}
-          getRowId={getRowId}
-          suppressRowTransform={true}
-          domLayout="autoHeight"
-          onGridReady={onGridReady}
-          onFirstDataRendered={onFirstDataRendered}
-        />
+    <div className="space-y-4">
+      <MonthToggle showExtendedMonths={showExtendedMonths} onToggle={handleToggleChange} />
+
+      <div className="ag-theme-alpine w-full h-full">
+        <div className="w-full h-full overflow-auto scrollbar-hide grid-container">
+          <AgGridReact
+            key={`metrics-grid-${metricTypeId || "all"}-${showExtendedMonths ? "extended" : "standard"}`}
+            rowData={gridData}
+            columnDefs={columnDefs}
+            defaultColDef={defaultColDef}
+            getRowId={getRowId}
+            suppressRowTransform={true}
+            domLayout="autoHeight"
+            onGridReady={onGridReady}
+            onFirstDataRendered={onFirstDataRendered}
+          />
+        </div>
       </div>
+
+      {isSmallScreen && <div className="text-xs text-gray-500 mt-2 italic">Swipe horizontally to view all months</div>}
     </div>
   )
 }

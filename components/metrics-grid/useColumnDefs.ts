@@ -17,6 +17,7 @@ export const useColumnDefs = (
   handleToggleRow: (metricId: number) => void,
   pendingAction: PendingAction | null,
   metricPerformanceColors: any,
+  isSmallScreen = false,
 ) => {
   return useMemo<ColDef[]>(
     () => [
@@ -33,13 +34,14 @@ export const useColumnDefs = (
             handleToggleRow={handleToggleRow}
           />
         ),
-        flex: 2,
+        flex: isSmallScreen ? 1.5 : 2,
         filter: "agTextColumnFilter",
         pinned: "left", // Pin this column to the left
         cellStyle: {
           border: "1px solid #000000", // Black border for all cells
         },
         headerClass: "custom-header",
+        minWidth: 150,
       },
       {
         headerName: "Metric",
@@ -52,6 +54,7 @@ export const useColumnDefs = (
           border: "1px solid #000000", // Black border for all cells
         },
         headerClass: "custom-header",
+        minWidth: 120,
       },
       {
         headerName: "Metric Type",
@@ -65,6 +68,8 @@ export const useColumnDefs = (
           border: "1px solid #000000", // Black border for all cells
         },
         headerClass: "custom-header",
+        minWidth: 100,
+        hide: isSmallScreen, // Hide on small screens
       },
       {
         headerName: "Thresholds",
@@ -76,6 +81,7 @@ export const useColumnDefs = (
           border: "1px solid #000000", // Black border for all cells
         },
         headerClass: "custom-header",
+        minWidth: 100,
       },
       {
         headerName: "Source",
@@ -89,12 +95,18 @@ export const useColumnDefs = (
           border: "1px solid #000000", // Black border for all cells
         },
         headerClass: "custom-header",
+        minWidth: 100,
+        hide: isSmallScreen, // Hide on small screens
       },
       ...monthColumns.map(({ month, result }) => ({
-        headerClass: "custom-header text-center",
-        headerName: month ? new Date(month).toLocaleDateString("en-US", { year: "numeric", month: "short" }) : "N/A",
+        headerClass: "custom-header text-center month-column",
+        headerName: month
+          ? isSmallScreen
+            ? new Date(month).toLocaleDateString("en-US", { month: "short" }) // Shorter format for small screens
+            : new Date(month).toLocaleDateString("en-US", { year: "numeric", month: "short" })
+          : "N/A",
         field: result,
-        flex: 1,
+        flex: 0.8,
         cellStyle: (params: any) => {
           const backgroundColor = getCellColor(params, metricPerformanceColors)
 
@@ -103,6 +115,7 @@ export const useColumnDefs = (
             backgroundColor: backgroundColor,
             color: !params.value || params.value === "NDTR" ? "gray" : "black",
             border: "1px solid #000000", // Black border for all cells
+            padding: isSmallScreen ? "2px" : "8px", // Smaller padding on small screens
           }
         },
         valueFormatter: (params: any) => {
@@ -111,6 +124,8 @@ export const useColumnDefs = (
         },
         cellRenderer: MonthCell,
         filter: "agTextColumnFilter",
+        minWidth: isSmallScreen ? 80 : 100,
+        maxWidth: isSmallScreen ? 100 : 150,
       })),
     ],
     [
@@ -121,6 +136,7 @@ export const useColumnDefs = (
       handleToggleRow,
       pendingAction,
       metricPerformanceColors,
+      isSmallScreen,
     ],
   )
 }
