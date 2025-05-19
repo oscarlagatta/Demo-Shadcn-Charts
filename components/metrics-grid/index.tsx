@@ -5,8 +5,8 @@ import { useCallback, useEffect, useState, useRef } from "react"
 import { AgGridReact } from "ag-grid-react"
 import type { GetRowIdParams } from "ag-grid-community"
 
-import { useDashboardData } from "@bofa/data-services"
-import { metricPerformanceColors } from "@bofa/util"
+import { useDashboardData } from "@/utils/data-services"
+import { metricPerformanceColors } from "@/utils/colors"
 
 import type { MetricsGridProps, PendingAction } from "./types"
 import { renderLoadingSpinner } from "./LoadingSpinner"
@@ -194,7 +194,7 @@ const MetricsGrid: React.FC<MetricsGridProps> = ({ selectedMonth, selectedLeader
       <MonthToggle showExtendedMonths={showExtendedMonths} onToggle={handleToggleChange} />
 
       <div className="ag-theme-alpine w-full h-full">
-        <div className="w-full h-full overflow-auto scrollbar-hide grid-container">
+        <div className="w-full h-full overflow-auto scrollbar-show grid-container">
           <AgGridReact
             key={`metrics-grid-${metricTypeId || "all"}-${showExtendedMonths ? "extended" : "standard"}`}
             rowData={gridData}
@@ -209,7 +209,41 @@ const MetricsGrid: React.FC<MetricsGridProps> = ({ selectedMonth, selectedLeader
         </div>
       </div>
 
-      {isSmallScreen && <div className="text-xs text-gray-500 mt-2 italic">Swipe horizontally to view all months</div>}
+      {isSmallScreen && (
+        <div className="text-xs text-gray-500 mt-2 flex items-center justify-center bg-gray-100 p-2 rounded-md">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="mr-1"
+          >
+            <polyline points="15 18 9 12 15 6"></polyline>
+            <polyline points="9 18 3 12 9 6"></polyline>
+          </svg>
+          Swipe horizontally to view all months
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="ml-1"
+          >
+            <polyline points="9 18 15 12 9 6"></polyline>
+            <polyline points="15 18 21 12 15 6"></polyline>
+          </svg>
+        </div>
+      )}
     </div>
   )
 }

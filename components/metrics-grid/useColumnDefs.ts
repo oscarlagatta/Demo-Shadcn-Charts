@@ -126,6 +126,7 @@ export const useColumnDefs = (
         filter: "agTextColumnFilter",
         minWidth: isSmallScreen ? 80 : 100,
         maxWidth: isSmallScreen ? 100 : 150,
+        suppressSizeToFit: true, // Prevent auto-sizing from making columns too narrow
       })),
     ],
     [
