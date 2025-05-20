@@ -5,6 +5,7 @@ import { BarChart, LineChart, PieChart } from "@/components/ui/chart"
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react"
 
 import MetricsGrid from "@/components/metrics-grid"
+import NonGreenMetrics from "@/components/NonGreenMetrics"
 import { mainMetrics } from "@/data/metrics-data"
 
 export default function Dashboard() {
@@ -217,6 +218,9 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Non-Green Metrics */}
+      <NonGreenMetrics />
 
       {/* Metrics Grid */}
       <Card>
