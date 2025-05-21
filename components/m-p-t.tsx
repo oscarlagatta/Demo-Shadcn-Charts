@@ -90,6 +90,12 @@ const BubbleBar = (props: any) => {
     highlight: "rgba(255,255,255,0.7)",
   }
 
+  // Apply a larger radius for red bars
+  let topRadius = radius
+  if (fill === "#e61622") {
+    topRadius = 12 // More rounded top for red bars
+  }
+
   // Customize gradient colors based on the base color
   if (fill === "#009223") {
     // Green
@@ -148,7 +154,7 @@ const BubbleBar = (props: any) => {
         fill={`url(#${verticalGradientId})`}
         stroke={gradientColors.darker}
         strokeWidth={1}
-        radius={[radius, radius, 0, 0]}
+        radius={[topRadius, topRadius, 0, 0]}
         rx={4}
         ry={4}
       />
@@ -163,32 +169,6 @@ const BubbleBar = (props: any) => {
         fill={gradientColors.highlight}
         opacity={0.7}
       />
-
-      {/* Add subtle bubble effects */}
-      {height > 10 && (
-        <>
-          <circle
-            cx={x + width * 0.25}
-            cy={actualY + actualHeight * 0.3}
-            r={Math.min(3, width * 0.1)}
-            fill="rgba(255,255,255,0.6)"
-          />
-          <circle
-            cx={x + width * 0.75}
-            cy={actualY + actualHeight * 0.6}
-            r={Math.min(2, width * 0.07)}
-            fill="rgba(255,255,255,0.5)"
-          />
-          {height > 30 && (
-            <circle
-              cx={x + width * 0.5}
-              cy={actualY + actualHeight * 0.4}
-              r={Math.min(1.5, width * 0.05)}
-              fill="rgba(255,255,255,0.7)"
-            />
-          )}
-        </>
-      )}
     </g>
   )
 }
@@ -382,7 +362,7 @@ export default function MetricPerformanceTrend({
                 stackId="a"
                 fill="#ffbf00"
                 name="Amber"
-                shape={<BubbleBar />}
+                shape={<BubbleBar radius={8} />}
                 animationDuration={1500}
               />
               <Bar
@@ -391,7 +371,7 @@ export default function MetricPerformanceTrend({
                 stackId="a"
                 fill="#e61622"
                 name="Red"
-                shape={<BubbleBar />}
+                shape={<BubbleBar radius={12} />}
                 animationDuration={1500}
               />
               <Line
