@@ -180,7 +180,11 @@ export default function MetricPerformanceTrend({
   selectedMetricType,
   selectedLeader,
 }: MetricPerformanceTrendProps) {
-  const { sixMonthByMetricPerformance } = useDashboardData(selectedMonth, selectedLeader?.id, selectedMetricType?.id)
+  const { sixMonthByMetricPerformance, sixMonthByMetricPerformanceQuery } = useDashboardData(
+    selectedMonth,
+    selectedLeader?.id,
+    selectedMetricType?.id,
+  )
 
   // Process data for the chart
   const chartData = useMemo(() => {
@@ -266,6 +270,73 @@ export default function MetricPerformanceTrend({
     // Round up to the nearest 5
     return Math.ceil(maxTotal / 5) * 5
   }, [chartData])
+
+  // Loading skeleton for the chart
+  const renderLoadingSkeleton = () => {
+    return (
+      <Card className="shadow-xl transition-shadow duration-300 hover:shadow-2xl">
+        <CardHeader>
+          <div className="h-7 w-64 animate-pulse rounded-md bg-gray-200"></div>
+          <div className="h-5 w-96 animate-pulse rounded-md bg-gray-200 mt-2"></div>
+        </CardHeader>
+        <CardContent>
+          <div className="bg-gradient-to-b from-gray-50 to-gray-100 flex h-[600px] w-full items-center justify-center rounded-md border border-gray-200 shadow-inner">
+            {/* Skeleton for Y-axis */}
+            <div className="absolute left-12 top-1/2 transform -translate-y-1/2 space-y-16">
+              {[...Array(5)].map((_, i) => (
+                <div key={`y-tick-${i}`} className="h-4 w-8 animate-pulse rounded-md bg-gray-200"></div>
+              ))}
+            </div>
+
+            {/* Skeleton for X-axis */}
+            <div className="absolute bottom-16 left-1/2 transform -translate-x-1/2 flex space-x-12">
+              {[...Array(6)].map((_, i) => (
+                <div key={`x-tick-${i}`} className="h-4 w-12 animate-pulse rounded-md bg-gray-200"></div>
+              ))}
+            </div>
+
+            {/* Skeleton for bars */}
+            <div className="flex h-3/4 items-end space-x-12 px-16">
+              {[...Array(6)].map((_, i) => (
+                <div key={`bar-group-${i}`} className="flex flex-col items-center space-y-1">
+                  <div
+                    className="w-16 animate-pulse rounded-t-md bg-red-400"
+                    style={{ height: `${20 + Math.random() * 30}px` }}
+                  ></div>
+                  <div
+                    className="w-16 animate-pulse bg-amber-400"
+                    style={{ height: `${30 + Math.random() * 40}px` }}
+                  ></div>
+                  <div
+                    className="w-16 animate-pulse bg-green-600"
+                    style={{ height: `${50 + Math.random() * 100}px` }}
+                  ></div>
+                </div>
+              ))}
+            </div>
+
+            {/* Skeleton for line */}
+            <div className="absolute top-1/3 left-0 right-0 h-0.5 w-full">
+              <div className="relative h-0.5 w-full bg-gray-300">
+                {[...Array(6)].map((_, i) => (
+                  <div
+                    key={`dot-${i}`}
+                    className="absolute h-3 w-3 animate-pulse rounded-full bg-gray-700"
+                    style={{ left: `${(i + 0.5) * (100 / 6)}%`, top: "-4px" }}
+                  ></div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  // Check if data is loading
+  if (sixMonthByMetricPerformanceQuery.isLoading || !sixMonthByMetricPerformance) {
+    return renderLoadingSkeleton()
+  }
 
   return (
     <Card className="shadow-xl transition-shadow duration-300 hover:shadow-2xl">
