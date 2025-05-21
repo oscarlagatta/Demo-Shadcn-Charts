@@ -79,8 +79,7 @@ const BubbleBar = (props: any) => {
   const actualY = y + (height - actualHeight)
 
   // Create unique gradient IDs based on the fill color and position
-  const horizontalGradientId = `bubbleGradientH-${fill.replace("#", "")}-${x}-${y}`
-  const verticalGradientId = `bubbleGradientV-${fill.replace("#", "")}-${x}-${y}`
+  const gradientId = `bubbleGradient-${fill.replace("#", "")}-${x}-${y}`
 
   // Define gradient colors based on the fill
   let gradientColors = {
@@ -90,35 +89,35 @@ const BubbleBar = (props: any) => {
     highlight: "rgba(255,255,255,0.7)",
   }
 
-  // Apply a larger radius for red bars
-  let topRadius = radius
+  // Apply rounded top only for red bars
+  let topRadius = 0 // Default to square top
   if (fill === "#e61622") {
-    topRadius = 12 // More rounded top for red bars
+    topRadius = 12 // Rounded top only for red bars
   }
 
   // Customize gradient colors based on the base color
   if (fill === "#009223") {
-    // Green
+    // Green - subtle horizontal gradient from lighter green to correct green
     gradientColors = {
-      lighter: "#00b52b",
-      main: "#009223",
-      darker: "#00721c",
-      highlight: "rgba(255,255,255,0.7)",
+      lighter: "#4db356", // Lighter green
+      main: "#009223", // Correct green
+      darker: "#009223", // Same as main for subtle effect
+      highlight: "rgba(255,255,255,0.5)",
     }
   } else if (fill === "#ffbf00") {
     // Amber
     gradientColors = {
-      lighter: "#ffcf33",
+      lighter: "#ffbf00",
       main: "#ffbf00",
-      darker: "#cc9900",
-      highlight: "rgba(255,255,255,0.6)",
+      darker: "#ffbf00",
+      highlight: "rgba(255,255,255,0.5)",
     }
   } else if (fill === "#e61622") {
     // Red
     gradientColors = {
-      lighter: "#f73642",
+      lighter: "#e61622",
       main: "#e61622",
-      darker: "#b8121b",
+      darker: "#e61622",
       highlight: "rgba(255,255,255,0.5)",
     }
   }
@@ -126,22 +125,21 @@ const BubbleBar = (props: any) => {
   return (
     <g>
       <defs>
-        {/* Horizontal gradient (left to right) */}
-        <linearGradient id={horizontalGradientId} x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor={gradientColors.main} stopOpacity={0.8} />
-          <stop offset="20%" stopColor={gradientColors.lighter} stopOpacity={0.9} />
-          <stop offset="50%" stopColor={gradientColors.main} stopOpacity={1} />
-          <stop offset="80%" stopColor={gradientColors.darker} stopOpacity={0.9} />
-          <stop offset="100%" stopColor={gradientColors.main} stopOpacity={0.8} />
-        </linearGradient>
-
-        {/* Vertical gradient (top to bottom) */}
-        <linearGradient id={verticalGradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={gradientColors.highlight} stopOpacity={0.9} />
-          <stop offset="15%" stopColor={gradientColors.lighter} stopOpacity={0.8} />
-          <stop offset="50%" stopColor={gradientColors.main} stopOpacity={1} />
-          <stop offset="85%" stopColor={gradientColors.darker} stopOpacity={0.9} />
-          <stop offset="100%" stopColor={gradientColors.darker} stopOpacity={0.7} />
+        {/* Horizontal gradient for green bars, solid color for others */}
+        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="0">
+          {fill === "#009223" ? (
+            // Subtle horizontal gradient for green bars
+            <>
+              <stop offset="0%" stopColor={gradientColors.lighter} stopOpacity={0.9} />
+              <stop offset="100%" stopColor={gradientColors.main} stopOpacity={1} />
+            </>
+          ) : (
+            // Solid color for other bars
+            <>
+              <stop offset="0%" stopColor={fill} stopOpacity={0.95} />
+              <stop offset="100%" stopColor={fill} stopOpacity={0.95} />
+            </>
+          )}
         </linearGradient>
       </defs>
 
@@ -151,12 +149,10 @@ const BubbleBar = (props: any) => {
         y={actualY}
         width={width}
         height={actualHeight}
-        fill={`url(#${verticalGradientId})`}
-        stroke={gradientColors.darker}
-        strokeWidth={1}
+        fill={`url(#${gradientId})`}
+        stroke={fill}
+        strokeWidth={0.5}
         radius={[topRadius, topRadius, 0, 0]}
-        rx={4}
-        ry={4}
       />
 
       {/* Glass reflection effect - top highlight */}
@@ -353,7 +349,7 @@ export default function MetricPerformanceTrend({
                 stackId="a"
                 fill="#009223"
                 name="Green"
-                shape={<BubbleBar radius={8} />}
+                shape={<BubbleBar />}
                 animationDuration={1500}
               />
               <Bar
@@ -362,7 +358,7 @@ export default function MetricPerformanceTrend({
                 stackId="a"
                 fill="#ffbf00"
                 name="Amber"
-                shape={<BubbleBar radius={8} />}
+                shape={<BubbleBar />}
                 animationDuration={1500}
               />
               <Bar
@@ -371,7 +367,7 @@ export default function MetricPerformanceTrend({
                 stackId="a"
                 fill="#e61622"
                 name="Red"
-                shape={<BubbleBar radius={12} />}
+                shape={<BubbleBar />}
                 animationDuration={1500}
               />
               <Line
