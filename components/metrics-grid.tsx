@@ -1,542 +1,952 @@
 "use client"
 
-import { useCallback, useEffect, useState, useMemo, useRef } from "react"
-
-import type { ColDef, GetRowIdParams, ICellRendererParams } from "ag-grid-community"
+import { useCallback, useEffect, useState, useMemo } from "react"
 import { AgGridReact } from "ag-grid-react"
-import { ChevronDown, ChevronRight } from "lucide-react"
-
-import { type CellColorParams, useDashboardData } from "@bofa/data-services"
-import { metricPerformanceColors } from "@bofa/util"
-
-import { MetricTooltip } from "./MetricTooltip"
+import { ChevronDown, ChevronRight, Info } from "lucide-react"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { ModuleRegistry, ClientSideRowModelModule } from "ag-grid-community"
 
 import "ag-grid-community/styles/ag-grid.css"
 import "ag-grid-community/styles/ag-theme-alpine.css"
 
-// Define props interface for the component
-interface MetricsGridProps {
-  selectedMonth?: string // Format: "YYYY-MM", undefined means "All Months"
-  selectedLeader?: { id: string; name: string } | null // null means "All Leaders"
-  metricTypeId?: number
+// Register the required AG Grid modules
+ModuleRegistry.registerModules([ClientSideRowModelModule])
+
+// Static data instead of fetching from hooks
+const mainMetrics = [
+  {
+    metricPrefix: "PM001",
+    valueType: "%",
+    metricId: 1,
+    metricName: "PBI Record has Coordinator 24 hours after creation PBI",
+    serviceAlignment: "IT Services",
+    trigger: 87.42,
+    limit: 73.89,
+    source: "DataMart.",
+    firstMonth: "2025-03",
+    secondMonth: "2025-02",
+    thirdMonth: "2025-01",
+    fourthMonth: "2024-12",
+    fiveMonth: "2024-11",
+    sixMonth: "2024-10",
+    firstMonth_Result: "83.33-125-150",
+    secondMonth_Result: "82.35-112-136",
+    thirdMonth_Result: "83.33-125-150",
+    fourthMonth_Result: "86.67-130-150",
+    fiveMonth_Result: "90.91-140-154",
+    sixMonth_Result: null,
+    firstMonth_Color: "Green",
+    secondMonth_Color: "Green",
+    thirdMonth_Color: "Green",
+    fourthMonth_Color: "Green",
+    fiveMonth_Color: "Green",
+    sixMonth_Color: "Grey",
+    metricColor: "Green",
+  },
+  {
+    metricPrefix: "PM002",
+    valueType: "Days",
+    metricId: 2,
+    metricName: "Incident Resolution within SLA",
+    serviceAlignment: null,
+    trigger: 85.05,
+    limit: 70.93,
+    source: "ServiceNow.",
+    firstMonth: "2025-03",
+    secondMonth: "2025-02",
+    thirdMonth: "2025-01",
+    fourthMonth: "2024-12",
+    fiveMonth: "2024-11",
+    sixMonth: "2024-10",
+    firstMonth_Result: "86.67-130-150",
+    secondMonth_Result: "90.91-140-154",
+    thirdMonth_Result: "76.47-104-136",
+    fourthMonth_Result: "82.35-112-136",
+    fiveMonth_Result: null,
+    sixMonth_Result: null,
+    firstMonth_Color: "Green",
+    secondMonth_Color: "Green",
+    thirdMonth_Color: "Amber",
+    fourthMonth_Color: "Amber",
+    fiveMonth_Color: "Grey",
+    sixMonth_Color: "Grey",
+    metricColor: "Green",
+  },
+  {
+    metricPrefix: "PM003",
+    valueType: "Hours",
+    metricId: 3,
+    metricName: "Change Request Approval Rate",
+    serviceAlignment: "IT Services",
+    trigger: 89.01,
+    limit: 69.32,
+    source: "PowerBI.",
+    firstMonth: "2025-03",
+    secondMonth: "2025-02",
+    thirdMonth: "2025-01",
+    fourthMonth: "2024-12",
+    fiveMonth: "2024-11",
+    sixMonth: "2024-10",
+    firstMonth_Result: "93.33-140-150",
+    secondMonth_Result: "90.91-140-154",
+    thirdMonth_Result: "76.47-104-136",
+    fourthMonth_Result: null,
+    fiveMonth_Result: null,
+    sixMonth_Result: null,
+    firstMonth_Color: "Green",
+    secondMonth_Color: "Green",
+    thirdMonth_Color: "Amber",
+    fourthMonth_Color: "Grey",
+    fiveMonth_Color: "Grey",
+    sixMonth_Color: "Grey",
+    metricColor: "Green",
+  },
+  {
+    metricPrefix: "PM004",
+    valueType: "Count",
+    metricId: 4,
+    metricName: "Service Request Completion Time",
+    serviceAlignment: null,
+    trigger: 76.05,
+    limit: 67.93,
+    source: "Tableau.",
+    firstMonth: "2025-03",
+    secondMonth: "2025-02",
+    thirdMonth: "2025-01",
+    fourthMonth: "2024-12",
+    fiveMonth: "2024-11",
+    sixMonth: "2024-10",
+    firstMonth_Result: "83.33-125-150",
+    secondMonth_Result: "86.67-130-150",
+    thirdMonth_Result: "90.91-140-154",
+    fourthMonth_Result: "76.47-104-136",
+    fiveMonth_Result: null,
+    sixMonth_Result: null,
+    firstMonth_Color: "Green",
+    secondMonth_Color: "Green",
+    thirdMonth_Color: "Green",
+    fourthMonth_Color: "Green",
+    fiveMonth_Color: "Grey",
+    sixMonth_Color: "Grey",
+    metricColor: "Green",
+  },
+  {
+    metricPrefix: "PM005",
+    valueType: "Score",
+    metricId: 5,
+    metricName: "System Availability Percentage",
+    serviceAlignment: "IT Services",
+    trigger: 85.93,
+    limit: 71.01,
+    source: "JIRA.",
+    firstMonth: "2025-03",
+    secondMonth: "2025-02",
+    thirdMonth: "2025-01",
+    fourthMonth: "2024-12",
+    fiveMonth: "2024-11",
+    sixMonth: "2024-10",
+    firstMonth_Result: "82.35-112-136",
+    secondMonth_Result: "83.33-125-150",
+    thirdMonth_Result: "93.33-140-150",
+    fourthMonth_Result: "86.67-130-150",
+    fiveMonth_Result: "90.91-140-154",
+    sixMonth_Result: null,
+    firstMonth_Color: "Amber",
+    secondMonth_Color: "Amber",
+    thirdMonth_Color: "Green",
+    fourthMonth_Color: "Green",
+    fiveMonth_Color: "Green",
+    sixMonth_Color: "Grey",
+    metricColor: "Amber",
+  },
+]
+
+// Detail records by metric ID
+const detailRecordsByMetricId = {
+  "1": [
+    {
+      metricId: 1,
+      sltMBId: 100,
+      sltName: "John Wilson",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "82.35-28-34",
+      secondMonth_Result: "80.00-28-35",
+      thirdMonth_Result: "82.35-28-34",
+      fourthMonth_Result: "85.71-30-35",
+      fiveMonth_Result: "90.91-40-44",
+      sixMonth_Result: null,
+      firstMonth_Color: "Amber",
+      secondMonth_Color: "Amber",
+      thirdMonth_Color: "Amber",
+      fourthMonth_Color: "Amber",
+      fiveMonth_Color: "Green",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 1,
+      sltMBId: 101,
+      sltName: "Sarah Brown",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "80.00-40-50",
+      secondMonth_Result: "82.35-28-34",
+      thirdMonth_Result: "80.00-40-50",
+      fourthMonth_Result: "85.71-30-35",
+      fiveMonth_Result: "90.91-40-44",
+      sixMonth_Result: null,
+      firstMonth_Color: "Amber",
+      secondMonth_Color: "Amber",
+      thirdMonth_Color: "Amber",
+      fourthMonth_Color: "Amber",
+      fiveMonth_Color: "Green",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 1,
+      sltMBId: 102,
+      sltName: "William Smith",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "86.36-38-44",
+      secondMonth_Result: "84.85-28-33",
+      thirdMonth_Result: "86.36-38-44",
+      fourthMonth_Result: "88.89-40-45",
+      fiveMonth_Result: "90.91-40-44",
+      sixMonth_Result: null,
+      firstMonth_Color: "Amber",
+      secondMonth_Color: "Amber",
+      thirdMonth_Color: "Amber",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Green",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 1,
+      sltMBId: 103,
+      sltName: "Emma Rodriguez",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "86.36-19-22",
+      secondMonth_Result: "82.35-28-34",
+      thirdMonth_Result: "86.36-19-22",
+      fourthMonth_Result: "88.57-31-35",
+      fiveMonth_Result: "90.91-20-22",
+      sixMonth_Result: null,
+      firstMonth_Color: "Amber",
+      secondMonth_Color: "Amber",
+      thirdMonth_Color: "Amber",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Green",
+      sixMonth_Color: "Grey",
+    },
+  ],
+  "2": [
+    {
+      metricId: 2,
+      sltMBId: 110,
+      sltName: "Michael Johnson",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "85.71-30-35",
+      secondMonth_Result: "90.91-40-44",
+      thirdMonth_Result: "76.47-26-34",
+      fourthMonth_Result: "82.35-28-34",
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 2,
+      sltMBId: 111,
+      sltName: "Lisa Davis",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "85.71-30-35",
+      secondMonth_Result: "90.91-40-44",
+      thirdMonth_Result: "76.47-26-34",
+      fourthMonth_Result: "82.35-28-34",
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 2,
+      sltMBId: 112,
+      sltName: "David Miller",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "88.89-40-45",
+      secondMonth_Result: "90.91-40-44",
+      thirdMonth_Result: "76.47-26-34",
+      fourthMonth_Result: "82.35-28-34",
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 2,
+      sltMBId: 113,
+      sltName: "Robert Garcia",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "86.36-19-22",
+      secondMonth_Result: "90.91-20-22",
+      thirdMonth_Result: "76.47-26-34",
+      fourthMonth_Result: "82.35-28-34",
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+  ],
+  "3": [
+    {
+      metricId: 3,
+      sltMBId: 120,
+      sltName: "Jane Williams",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "93.33-42-45",
+      secondMonth_Result: "90.91-40-44",
+      thirdMonth_Result: "76.47-26-34",
+      fourthMonth_Result: null,
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Grey",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 3,
+      sltMBId: 121,
+      sltName: "Olivia Jones",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "93.33-42-45",
+      secondMonth_Result: "90.91-40-44",
+      thirdMonth_Result: "76.47-26-34",
+      fourthMonth_Result: null,
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Grey",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 3,
+      sltMBId: 122,
+      sltName: "Sarah Brown",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "93.33-28-30",
+      secondMonth_Result: "90.91-30-33",
+      thirdMonth_Result: "76.47-26-34",
+      fourthMonth_Result: null,
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Grey",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 3,
+      sltMBId: 123,
+      sltName: "William Smith",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "93.33-28-30",
+      secondMonth_Result: "90.91-30-33",
+      thirdMonth_Result: "76.47-26-34",
+      fourthMonth_Result: null,
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Grey",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+  ],
+  "4": [
+    {
+      metricId: 4,
+      sltMBId: 130,
+      sltName: "Emma Rodriguez",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "83.33-25-30",
+      secondMonth_Result: "86.67-26-30",
+      thirdMonth_Result: "90.91-40-44",
+      fourthMonth_Result: "76.47-26-34",
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 4,
+      sltMBId: 131,
+      sltName: "Robert Garcia",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "83.33-25-30",
+      secondMonth_Result: "86.67-26-30",
+      thirdMonth_Result: "90.91-40-44",
+      fourthMonth_Result: "76.47-26-34",
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 4,
+      sltMBId: 132,
+      sltName: "David Miller",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "83.33-25-30",
+      secondMonth_Result: "86.67-26-30",
+      thirdMonth_Result: "90.91-30-33",
+      fourthMonth_Result: "76.47-26-34",
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 4,
+      sltMBId: 133,
+      sltName: "Lisa Davis",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "83.33-50-60",
+      secondMonth_Result: "86.67-52-60",
+      thirdMonth_Result: "90.91-30-33",
+      fourthMonth_Result: "76.47-26-34",
+      fiveMonth_Result: null,
+      sixMonth_Result: null,
+      firstMonth_Color: "Green",
+      secondMonth_Color: "Green",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Grey",
+      sixMonth_Color: "Grey",
+    },
+  ],
+  "5": [
+    {
+      metricId: 5,
+      sltMBId: 140,
+      sltName: "John Wilson",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "82.35-28-34",
+      secondMonth_Result: "83.33-25-30",
+      thirdMonth_Result: "93.33-42-45",
+      fourthMonth_Result: "86.67-26-30",
+      fiveMonth_Result: "90.91-40-44",
+      sixMonth_Result: null,
+      firstMonth_Color: "Amber",
+      secondMonth_Color: "Amber",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Green",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 5,
+      sltMBId: 141,
+      sltName: "Michael Johnson",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "82.35-28-34",
+      secondMonth_Result: "83.33-25-30",
+      thirdMonth_Result: "93.33-42-45",
+      fourthMonth_Result: "86.67-26-30",
+      fiveMonth_Result: "90.91-40-44",
+      sixMonth_Result: null,
+      firstMonth_Color: "Amber",
+      secondMonth_Color: "Amber",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Green",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 5,
+      sltMBId: 142,
+      sltName: "Jane Williams",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "82.35-28-34",
+      secondMonth_Result: "83.33-25-30",
+      thirdMonth_Result: "93.33-28-30",
+      fourthMonth_Result: "86.67-52-60",
+      fiveMonth_Result: "90.91-30-33",
+      sixMonth_Result: null,
+      firstMonth_Color: "Amber",
+      secondMonth_Color: "Amber",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Green",
+      sixMonth_Color: "Grey",
+    },
+    {
+      metricId: 5,
+      sltMBId: 143,
+      sltName: "Olivia Jones",
+      metricColor: null,
+      firstMonth: "2025-03",
+      secondMonth: "2025-02",
+      thirdMonth: "2025-01",
+      fourthMonth: "2024-12",
+      fiveMonth: "2024-11",
+      sixMonth: "2024-10",
+      firstMonth_Result: "82.35-28-34",
+      secondMonth_Result: "83.33-50-60",
+      thirdMonth_Result: "93.33-28-30",
+      fourthMonth_Result: "86.67-26-30",
+      fiveMonth_Result: "90.91-30-33",
+      sixMonth_Result: null,
+      firstMonth_Color: "Amber",
+      secondMonth_Color: "Amber",
+      thirdMonth_Color: "Green",
+      fourthMonth_Color: "Green",
+      fiveMonth_Color: "Green",
+      sixMonth_Color: "Grey",
+    },
+  ],
 }
 
-// Define the new API response structure
-interface MonthData {
-  month: string
-  numerator: string
-  denominator: string
-  result: string
-  color: string
-  updatedDateTime: string | null
+// Metric descriptions for tooltips
+const metricDescriptions = {
+  1: {
+    metricDescription:
+      "Measures the percentage of PBI records that have a coordinator assigned within 24 hours of creation",
+    metricCalculation:
+      "Number of PBI records with coordinator assigned within 24 hours / Total number of PBI records created",
+  },
+  2: {
+    metricDescription: "Tracks the percentage of incidents resolved within the Service Level Agreement timeframe",
+    metricCalculation: "Number of incidents resolved within SLA / Total number of incidents",
+  },
+  3: {
+    metricDescription: "Measures the rate at which change requests are approved by the Change Advisory Board",
+    metricCalculation: "Number of approved change requests / Total number of change requests submitted",
+  },
+  4: {
+    metricDescription: "Tracks the time taken to complete service requests from submission to resolution",
+    metricCalculation: "Number of service requests completed within target time / Total number of service requests",
+  },
+  5: {
+    metricDescription: "Measures the percentage of time that systems are available and operational",
+    metricCalculation: "Uptime duration / Total time period being measured",
+  },
 }
 
-interface MetricData {
-  metricId: number
-  metricPrefix: string
-  metricName: string
-  valueType: string
-  metricDescription: string
-  metricCalculation: string
-  serviceAlignment: string
-  trigger: number
-  limit: number
-  source: string
-  metricType: string
-  thresholdDirection: string | null
-  monthlyData: MonthData[]
+// Performance color constants
+const metricPerformanceColors = {
+  parent: {
+    good: "#009922",
+    vgood: "#ffffff",
+    warning: "#EA7600",
+    bad: "#94002B",
+    null: "#c6c6c6",
+  },
+  child: {
+    good: "#99D3A7",
+    vgood: "#FFFFFF",
+    warning: "#f7c899",
+    bad: "#dfb2bf",
+    null: "#d3d3d3",
+  },
 }
 
-// Define SLT data structure
-interface SltMonthData {
-  month: string
-  numerator: string
-  denominator: string
-  result: string
-  color: string
-}
-
-interface SltData {
-  sltNbkId: string
-  sltName: string
-  sltMonthlyData: SltMonthData[]
-}
-
-interface SltResponse {
-  metricId: number
-  sltData: SltData[]
-}
-
-// Define the grid row data structure
-interface GridRowData {
-  metricId: number
-  metricPrefix?: string
-  metricName?: string
-  valueType?: string
-  metricDescription?: string
-  metricCalculation?: string
-  serviceAlignment?: string
-  trigger?: number
-  limit?: number
-  source?: string
-  metricType?: string
-  isParent: boolean
-  sltName?: string
-  sltNBId?: string
-  // Dynamic month fields will be added at runtime
-  [key: string]: any
-}
-
+// Loading spinner component
 const LoadingSpinner = () => (
-  <div className="relative h-5 w-5">
-    <div className="absolute inset-0 animate-spin rounded-full border-2 border-b-amber-500 border-l-red-500 border-r-green-500 border-t-transparent"></div>
-    <div className="absolute inset-1 flex items-center justify-center rounded-full bg-white">
-      <div className="h-1 w-1 rounded-full bg-gray-700"></div>
-    </div>
+  <div className="flex items-center justify-center w-6 h-6 animate-spin">
+    <div className="w-4 h-4 border-2 border-t-transparent border-gray-600 rounded-full" />
   </div>
 )
 
-const renderLoadingSpinner = () => {
+// Fetching progress component
+const FetchingProgress = () => (
+  <div className="flex flex-col items-center justify-center">
+    <LoadingSpinner />
+    <p className="mt-2 text-gray-600">Loading metrics data...</p>
+  </div>
+)
+
+// Metric tooltip component
+const MetricTooltip = ({ metricName, metricDescription, metricCalculation, isLoading, children }) => {
+  if (isLoading) {
+    return <div>{children}</div>
+  }
+
   return (
-    <div className="h-[600px] w-full flex flex-col items-center justify-center">
-      <LoadingSpinner />
-      <p className="mt-4 text-gray-600 font-medium">Loading metrics data...</p>
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex items-center">
+            {children}
+            {metricDescription && <Info size={14} className="ml-1 text-gray-400" />}
+          </div>
+        </TooltipTrigger>
+        {metricDescription && (
+          <TooltipContent className="max-w-md p-4">
+            <div className="space-y-2">
+              <h4 className="font-semibold">{metricName}</h4>
+              <p className="text-sm">{metricDescription}</p>
+              {metricCalculation && (
+                <div>
+                  <h5 className="text-sm font-semibold mt-2">Calculation:</h5>
+                  <p className="text-sm">{metricCalculation}</p>
+                </div>
+              )}
+            </div>
+          </TooltipContent>
+        )}
+      </Tooltip>
+    </TooltipProvider>
   )
 }
 
-const MetricsGrid = ({ selectedMonth, selectedLeader, metricTypeId }: MetricsGridProps) => {
-  const gridApiRef = useRef<any>(null)
+// Main metrics grid component
+export default function MetricsGrid() {
   const [expandedMetrics, setExpandedMetrics] = useState<number[]>([])
   const [selectedMetricId, setSelectedMetricId] = useState<number | null>(null)
-  const [gridData, setGridData] = useState<GridRowData[]>([])
-  const [pendingAction, setPendingAction] = useState<{
-    type: "expand" | "collapse"
-    metricId: number
-  } | null>(null)
+  const [gridData, setGridData] = useState<any[]>([])
+  const [hoveredMetricId, setHoveredMetricId] = useState<number | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
 
-  // Store all unique months across all metrics
-  const [allUniqueMonths, setAllUniqueMonths] = useState<string[]>([])
-
-  // Pass selectedLeader and selectedMonth to the useDashboardData hook
-  const { sixMonthByMetricPerformance, useGetSltMetricPerformance, sixMonthByMetricPerformanceQuery } =
-    useDashboardData(selectedMonth, selectedLeader?.id, metricTypeId)
-
-  // Reset expanded metrics with filters change
+  // Initialize grid data with main metrics
   useEffect(() => {
-    setExpandedMetrics([])
-    setSelectedMetricId(null)
-    setPendingAction(null)
-  }, [selectedLeader, selectedMonth, metricTypeId])
+    const baseData = mainMetrics.map((metric) => ({
+      ...metric,
+      isParent: true,
+      parentId: null,
+      rowLevel: 0,
+    }))
+    setGridData(baseData)
+  }, [])
 
-  // Pass selectedLeader and selectedMonth to the useGetSltMetricPerformance hook
-  const { data: sltMetricPerformance, isLoading: isSltDataLoading } = useGetSltMetricPerformance(
-    selectedMetricId ?? 0,
-    selectedMonth ?? undefined,
-    selectedLeader?.id ?? undefined,
-  ) as {
-    data: SltResponse | null
-    isLoading: boolean
-  }
-
-  const [isLoading, setIsLoading] = useState(true)
-  const [isGridMounted, setIsGridMounted] = useState(false)
-
-  // Update loading state and show/hide loading overlay
+  // Replace the existing useEffect for selectedMetricId with this improved version
   useEffect(() => {
-    setIsLoading(sixMonthByMetricPerformanceQuery.isLoading)
-  }, [sixMonthByMetricPerformanceQuery.isLoading])
+    if (selectedMetricId) {
+      setIsLoading(true)
 
-  // Collect all unique months across all metrics
-  useEffect(() => {
-    if (sixMonthByMetricPerformance && sixMonthByMetricPerformance.length > 0) {
-      const uniqueMonths = new Set<string>()
+      // Simulate API call with timeout
+      const timer = setTimeout(() => {
+        const detailRecords = detailRecordsByMetricId[selectedMetricId.toString()]
 
-      // Loop through all metrics to collect all available months
-      sixMonthByMetricPerformance.forEach((metric: MetricData) => {
-        metric.monthlyData.forEach((monthData: MonthData) => {
-          uniqueMonths.add(monthData.month)
-        })
-      })
+        if (detailRecords) {
+          setGridData((currentData) => {
+            // Find the parent row
+            const parentIndex = currentData.findIndex((row) => row.metricId === selectedMetricId && row.isParent)
 
-      // Convert to array and sort (newest first)
-      const sortedMonths = Array.from(uniqueMonths).sort(
-        (a: string, b: string) => new Date(b).getTime() - new Date(a).getTime(),
-      )
+            if (parentIndex === -1) return currentData
 
-      // MODIFIED: Limit to only the 6 most recent months
-      const last6Months = sortedMonths.slice(0, 6)
-
-      setAllUniqueMonths(last6Months)
-
-      console.log(`Found ${last6Months.length} unique months (limited to 6) across all metrics:`, last6Months)
-
-      // Debug specific metric
-      const metric71 = sixMonthByMetricPerformance.find((m) => m.metricId === 71)
-      if (metric71) {
-        console.log("Metric 71 data:", metric71.metricName)
-        console.log(
-          "Metric 71 months:",
-          metric71.monthlyData.map((m) => m.month),
-        )
-      }
-    }
-  }, [sixMonthByMetricPerformance])
-
-  // Initialize grid data with sixMonthByMetricPerformance
-  useEffect(() => {
-    if (sixMonthByMetricPerformance && allUniqueMonths.length > 0) {
-      const baseData = sixMonthByMetricPerformance.map((metric: MetricData) => {
-        // Create a base row with metric data
-        const baseRow: GridRowData = {
-          metricId: metric.metricId,
-          metricPrefix: metric.metricPrefix,
-          metricName: metric.metricName,
-          valueType: metric.valueType,
-          metricDescription: metric.metricDescription,
-          metricCalculation: metric.metricCalculation,
-          serviceAlignment: metric.serviceAlignment,
-          trigger: metric.trigger,
-          limit: metric.limit,
-          source: metric.source,
-          metricType: metric.metricType,
-          isParent: true,
-        }
-
-        // Create a map of month to month data for quick lookup
-        const monthDataMap = new Map<string, MonthData>()
-        metric.monthlyData.forEach((monthData) => {
-          monthDataMap.set(monthData.month, monthData)
-        })
-
-        // Add data for all unique months, using NDTR for missing months
-        allUniqueMonths.forEach((month, index) => {
-          const monthIndex = index + 1 // 1-based index
-          const monthName = getMonthNameByIndex(monthIndex)
-
-          if (monthName) {
-            const monthData = monthDataMap.get(month)
-
-            if (monthData) {
-              // Month data exists for this metric
-              baseRow[`${monthName}Month`] = month
-              baseRow[`${monthName}Month_Result`] = monthData.result
-              baseRow[`${monthName}Month_Color`] = monthData.color
-            } else {
-              // No data for this month, set NDTR
-              baseRow[`${monthName}Month`] = month
-              baseRow[`${monthName}Month_Result`] = "NDTR"
-              baseRow[`${monthName}Month_Color`] = "grey"
-            }
-          }
-        })
-
-        // Debug for metric 71
-        if (metric.metricId === 71) {
-          console.log("Metric 71 grid data:", baseRow)
-        }
-
-        return baseRow
-      })
-
-      setGridData(baseData)
-    }
-  }, [sixMonthByMetricPerformance, allUniqueMonths])
-
-  // Helper function to get month name by index
-  const getMonthNameByIndex = (index: number): string | null => {
-    const monthNames = [
-      "first",
-      "second",
-      "third",
-      "fourth",
-      "fifth",
-      "sixth",
-      "seventh",
-      "eighth",
-      "ninth",
-      "tenth",
-      "eleventh",
-      "twelfth",
-      "thirteenth",
-      "fourteenth",
-      "fifteenth",
-      "sixteenth",
-      "seventeenth",
-      "eighteenth",
-      "nineteenth",
-      "twentieth",
-      "twentyFirst",
-      "twentySecond",
-      "twentyThird",
-      "twentyFourth",
-    ]
-    return index <= monthNames.length ? monthNames[index - 1] : null
-  }
-
-  // Helper function to get month index from month string
-  const getMonthIndex = (monthStr: string): string | null => {
-    if (!allUniqueMonths || allUniqueMonths.length === 0) {
-      return null
-    }
-
-    // Find the index of the month in the sorted array
-    const index = allUniqueMonths.findIndex((m: string) => m === monthStr)
-    if (index === -1) return null
-
-    // Convert to 1-based index and get month name
-    return getMonthNameByIndex(index + 1)
-  }
-
-  // Process SLT data when it's loaded
-  useEffect(() => {
-    if (sltMetricPerformance && sltMetricPerformance.sltData && selectedMetricId && !isSltDataLoading) {
-      // only process if we have a pending expand action
-      if (pendingAction?.type === "expand" && pendingAction.metricId === selectedMetricId) {
-        // create a new grid data array without modifying the existing one
-        const baseGrid = [...gridData]
-
-        // Find the parent row index
-        const parentIndex = baseGrid.findIndex((row) => row.metricId === selectedMetricId && row.isParent)
-
-        if (parentIndex !== -1) {
-          // create child rows
-          const childRows = sltMetricPerformance.sltData.map((slt: SltData) => {
-            // Create a base row with SLT data
-            const childRow: GridRowData = {
+            // Create child rows with proper hierarchy
+            const childRows = detailRecords.map((slt, index) => ({
+              ...currentData[parentIndex],
+              ...slt,
               metricId: selectedMetricId,
               isParent: false,
+              parentId: selectedMetricId,
+              rowLevel: 1,
               sltName: slt.sltName,
-              sltNBId: slt.sltNbkId,
-            }
+              sltNBId: slt.sltMBId,
+              // Add a unique identifier for sorting stability
+              childIndex: index,
+              // Create a composite sort key that maintains parent-child relationship
+              sortKey: `${selectedMetricId}-child-${index}`,
+            }))
 
-            // Create a map of month to month data for quick lookup
-            const monthDataMap = new Map<string, SltMonthData>()
-            slt.sltMonthlyData.forEach((monthData) => {
-              monthDataMap.set(monthData.month, monthData)
-            })
+            // Insert child rows after parent
+            const newData = [
+              ...currentData.slice(0, parentIndex + 1),
+              ...childRows,
+              ...currentData.slice(parentIndex + 1),
+            ]
 
-            // Add data for all unique months, using NDTR for missing months
-            allUniqueMonths.forEach((month, index) => {
-              const monthIndex = index + 1 // 1-based index
-              const monthName = getMonthNameByIndex(monthIndex)
-
-              if (monthName) {
-                const monthData = monthDataMap.get(month)
-
-                if (monthData) {
-                  // Month data exists for this SLT
-                  childRow[`${monthName}Month`] = month
-                  childRow[`${monthName}Month_Result`] = monthData.result
-                  childRow[`${monthName}Month_Color`] = monthData.color
-                } else {
-                  // No data for this month, set NDTR
-                  childRow[`${monthName}Month`] = month
-                  childRow[`${monthName}Month_Result`] = "NDTR"
-                  childRow[`${monthName}Month_Color`] = "grey"
-                }
-              }
-            })
-
-            return childRow
+            return newData
           })
-
-          // Insert child rows after the parent
-          const newGridData = [...baseGrid.slice(0, parentIndex + 1), ...childRows, ...baseGrid.slice(parentIndex + 1)]
-
-          setGridData(newGridData)
-
-          // Add to expanded metrics
-          if (!expandedMetrics.includes(selectedMetricId)) {
-            setExpandedMetrics((prev) => [...prev, selectedMetricId])
-          }
+          setExpandedMetrics((prev) => [...prev, selectedMetricId])
         }
 
-        // Clear the pending action
-        setPendingAction(null)
-      }
+        setIsLoading(false)
+      }, 800)
+
+      return () => clearTimeout(timer)
     }
-  }, [
-    sltMetricPerformance,
-    selectedMetricId,
-    isSltDataLoading,
-    pendingAction,
-    gridData,
-    expandedMetrics,
-    allUniqueMonths,
-  ])
+  }, [selectedMetricId])
 
-  // process collapse action
-  useEffect(() => {
-    if (pendingAction?.type === "collapse") {
-      const metricId = pendingAction.metricId
-
-      // Remove child rows
-      setGridData((prev) => prev.filter((row) => !(row.metricId === metricId && !row.isParent)))
-
-      // Remove expanded metrics
-      setExpandedMetrics((prev) => prev.filter((id) => id !== metricId))
-
-      // Clear the pending action
-      setPendingAction(null)
-    }
-  }, [pendingAction])
-
-  // Get available months for display
+  // Generate month columns based on the first metric
   const monthColumns = useMemo(() => {
-    if (!allUniqueMonths || allUniqueMonths.length === 0) return []
+    if (!mainMetrics || mainMetrics.length === 0) return []
 
-    // If a specific month is selected, only show that month
-    if (selectedMonth) {
-      const filteredMonths = allUniqueMonths.filter((month: string) => month.startsWith(selectedMonth))
+    const firstMetric = mainMetrics[0]
+    return [
+      { month: firstMetric.firstMonth, result: "firstMonth_Result" },
+      { month: firstMetric.secondMonth, result: "secondMonth_Result" },
+      { month: firstMetric.thirdMonth, result: "thirdMonth_Result" },
+      { month: firstMetric.fourthMonth, result: "fourthMonth_Result" },
+      { month: firstMetric.fiveMonth, result: "fiveMonth_Result" },
+      { month: firstMetric.sixMonth, result: "sixMonth_Result" },
+    ]
+  }, [])
 
-      return filteredMonths.map((month: string, index: number) => {
-        const monthName = getMonthNameByIndex(index + 1)
-        return {
-          month,
-          result: `${monthName}Month_Result`,
+  // Handle row click to expand/collapse
+  const handleRowClicked = useCallback(
+    (event: any) => {
+      if (event.data?.isParent && event.data?.metricId) {
+        const metricId = event.data.metricId
+        if (expandedMetrics.includes(metricId)) {
+          // Collapse
+          setExpandedMetrics((prev) => prev.filter((id) => id !== metricId))
+          setGridData((currentData) => currentData.filter((row) => row.metricId !== metricId || row.isParent))
+        } else {
+          // Expand
+          setSelectedMetricId(metricId)
         }
-      })
-    }
-
-    // MODIFIED: Return only the 6 most recent months
-    return allUniqueMonths.slice(0, 6).map((month: string, index: number) => {
-      const monthName = getMonthNameByIndex(index + 1)
-      return {
-        month,
-        result: `${monthName}Month_Result`,
-      }
-    })
-  }, [allUniqueMonths, selectedMonth])
-
-  // Add this debug function to inspect the data structure
-  useEffect(() => {
-    if (sixMonthByMetricPerformance && sixMonthByMetricPerformance.length > 0) {
-      console.log("Data inspection:")
-      console.log("Number of metrics:", sixMonthByMetricPerformance.length)
-
-      // Check column definitions
-      console.log("Month columns:", monthColumns)
-    }
-  }, [sixMonthByMetricPerformance, monthColumns])
-
-  const handleToggleRow = useCallback(
-    (metricId: number) => {
-      // If there's already a pending action, ignore this click
-      if (pendingAction !== null) return
-
-      if (expandedMetrics.includes(metricId)) {
-        // Collapse: Set a pending collapse action
-        setPendingAction({ type: "collapse", metricId })
-      } else {
-        // Expand: set the selected metric ID and a pending expand action
-        setSelectedMetricId(metricId)
-        setPendingAction({ type: "expand", metricId })
       }
     },
-    [expandedMetrics, pendingAction],
+    [expandedMetrics],
   )
 
-  const getRowId = (params: GetRowIdParams) => {
+  // Generate unique row ID
+  const getRowId = (params: any) => {
     return params.data.isParent
       ? `metric-${params.data.metricId}`
-      : `slt-${params.data.metricId}-${params.data.sltNBId}`
+      : `slt-${params.data.metricId}-${params.data.sltMBId || params.data.sltNBId}`
   }
 
-  const getCellColor = (params: CellColorParams) => {
+  // Get cell color based on performance
+  const getCellColor = (params: any) => {
     const monthField = params.column.getColId()
-    if (!monthField) return "#f8f9fa" // Light gray instead of white
+    if (!monthField) return "white"
 
     const colorField = monthField.replace("_Result", "_Color")
 
-    // Use our new GridRowData interface
-    const data = params.data as GridRowData
-
-    const isParent = data.isParent
+    // Use a type assertion to tell TypeScript that params.data has the color fields
+    const data = params.data as any
+    const isParent = params.data.isParent
 
     if (colorField in data) {
       const color = data[colorField]
 
       if (typeof color === "string") {
         switch (color.toLowerCase()) {
-          case "#e61622":
           case "red":
             return isParent ? metricPerformanceColors.parent.bad : metricPerformanceColors.child.bad
-          case "#009223":
           case "green":
             return isParent ? metricPerformanceColors.parent.good : metricPerformanceColors.child.good
-          case "#ffbf00":
           case "amber":
             return isParent ? metricPerformanceColors.parent.warning : metricPerformanceColors.child.warning
           case "grey":
           case "black":
             return isParent ? metricPerformanceColors.parent.null : metricPerformanceColors.child.null
           default:
-            return "#f8f9fa" // Light gray instead of white
+            return "white"
         }
       }
     }
 
-    return "#f0f0f0" // Slightly darker gray for default
+    return "#f0f0f0"
   }
 
-  // Function to determine if a background color is light
-  const isLightColor = (color: string): boolean => {
-    return color === "#f8f9fa" || color === "#f0f0f0"
-  }
-
-  // Define header style with the requested background color
-  const headerStyle = {
-    backgroundColor: "#012169", // R:1, G:33, B:105
-    color: "#FFFFFF", // White text
-    border: "1px solid #000000", // Black border
-  }
-
-  const columnDefs = useMemo<ColDef[]>(
+  // Replace the columnDefs useMemo with this improved version
+  const columnDefs = useMemo(
     () => [
       {
-        headerName: "Service Alignment",
-        field: "serviceAlignment",
-        cellRenderer: (params: ICellRendererParams) => {
+        headerName: "Metric",
+        field: "metricName",
+        cellRenderer: (params: any) => {
           if (!params.data) return null
 
-          const data = params.data as GridRowData
-          const isParent = data.isParent
-          const metricId = data.metricId
-          const isExpanded = isParent && expandedMetrics.includes(metricId)
-          const isLoading =
-            isParent &&
-            ((pendingAction?.type === "expand" && pendingAction.metricId === metricId) ||
-              (isSltDataLoading && selectedMetricId === metricId))
+          const isParent = params.data.isParent
+          const isExpanded = isParent && expandedMetrics.includes(params.data.metricId)
+          const isCurrentlyLoading = isParent && isLoading && selectedMetricId === params.data.metricId
 
           const content = (
-            <div style={{ display: "flex", alignItems: "center" }}>
-              {isParent && (
-                <span
-                  style={{ cursor: "pointer", marginRight: "5px" }}
-                  onClick={(e) => {
-                    e.stopPropagation()
-                    handleToggleRow(metricId)
-                  }}
-                >
-                  {isLoading ? (
-                    <LoadingSpinner />
-                  ) : isExpanded ? (
-                    <ChevronDown size={16} data-testid="chevron-down" aria-hidden="true" />
-                  ) : (
-                    <ChevronRight size={16} data-testid="chevron-right" aria-hidden="true" />
-                  )}
-                </span>
-              )}
-              {isParent ? params.value : <div style={{ paddingLeft: "24px" }}>{data.sltName}</div>}
+            <div
+              className="flex items-center"
+              style={{
+                paddingLeft: `${params.data.rowLevel * 20}px`,
+                minHeight: "40px",
+                alignItems: "center",
+              }}
+              onMouseEnter={() => setHoveredMetricId(params.data?.metricId ?? null)}
+              onMouseLeave={() => setHoveredMetricId(null)}
+            >
+              {isParent &&
+                (isCurrentlyLoading ? (
+                  <LoadingSpinner />
+                ) : (
+                  <span
+                    className="cursor-pointer mr-1.5"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      handleRowClicked({
+                        data: params.data,
+                      })
+                    }}
+                  >
+                    {isExpanded ? (
+                      <ChevronDown size={16} data-testid="chevron-down" aria-hidden="true" />
+                    ) : (
+                      <ChevronRight size={16} data-testid="chevron-right" aria-hidden="true" />
+                    )}
+                  </span>
+                ))}
+              {isParent ? params.value : <div className="pl-6">{params.data.sltName}</div>}
             </div>
           )
 
+          const metricData = metricDescriptions[params.data.metricId]
+
           return (
             <MetricTooltip
-              metricName={isParent ? (data.metricName ?? "") : (data.sltName ?? "")}
-              metricDescription={isParent ? (data.metricDescription ?? "") : ""}
-              metricCalculation={isParent ? (data.metricCalculation ?? "") : ""}
+              metricName={isParent ? (params.data.metricName ?? "") : (params.data.sltName ?? "")}
+              metricDescription={metricData?.metricDescription ?? ""}
+              metricCalculation={metricData?.metricCalculation ?? ""}
               isLoading={false}
             >
               {content}
@@ -544,109 +954,200 @@ const MetricsGrid = ({ selectedMonth, selectedLeader, metricTypeId }: MetricsGri
           )
         },
         flex: 2,
-        filter: "agTextColumnFilter",
-        pinned: "left", // Pin this column to the left
-        cellStyle: {
-          border: "1px solid #000000", // Black border for all cells
-        },
-        headerClass: "custom-header",
-      },
-      {
-        headerName: "Metric",
-        field: "metricName",
-        flex: 1,
-        filter: "agTextColumnFilter",
-        cellRenderer: (params: ICellRendererParams) => {
-          const data = params.data as GridRowData
-          return data.isParent ? "[" + data.metricPrefix + "] " + data.metricName : ""
-        },
-        pinned: "left", // Pin this column to the left
-        cellStyle: {
-          border: "1px solid #000000", // Black border for all cells
-        },
-        headerClass: "custom-header",
-      },
-      {
-        headerName: "Metric Type",
-        field: "metricType",
-        flex: 1,
-        filter: "agTextColumnFilter",
-        cellRenderer: (params: ICellRendererParams) => {
-          const data = params.data as GridRowData
-          return data.isParent ? params.value : ""
-        },
-        cellStyle: {
-          border: "1px solid #000000", // Black border for all cells
-        },
-        headerClass: "custom-header",
-      },
-      {
-        headerName: "Thresholds",
-        field: "trigger", // Using trigger as the base field
-        flex: 1,
-        filter: "agTextColumnFilter",
-        cellRenderer: (params: ICellRendererParams) => {
-          const data = params.data as GridRowData
+        filter: true,
+        // Custom comparator to maintain parent-child relationship during sorting
+        comparator: (valueA: any, valueB: any, nodeA: any, nodeB: any) => {
+          const dataA = nodeA.data
+          const dataB = nodeB.data
 
-          if (!data.isParent) return ""
-
-          const trigger = data.trigger
-          const limit = data.limit
-          const valueType = data.valueType
-          const suffix = valueType === "%" ? "%" : ""
-
-          const formatValue = (value: number | undefined) => {
-            if (value === null || value === undefined) return "n/a"
-            return `${value.toFixed(2)}${suffix}`
+          // If both are parents or both are children of the same parent, sort normally
+          if (dataA.isParent === dataB.isParent && dataA.parentId === dataB.parentId) {
+            if (valueA < valueB) return -1
+            if (valueA > valueB) return 1
+            return 0
           }
 
-          return (
-            <div className="flex items-center justify-center space-x-1">
-              <span className="text-green-600 font-medium">{formatValue(trigger)}</span>
-              <span className="text-gray-500">/</span>
-              <span className="text-red-600 font-medium">{formatValue(limit)}</span>
-            </div>
-          )
+          // If one is parent and one is child, parent comes first
+          if (dataA.isParent && !dataB.isParent) {
+            // If B is a child of A, A comes first
+            if (dataB.parentId === dataA.metricId) return -1
+            // Otherwise, sort by metric name
+            return dataA.metricName.localeCompare(dataB.metricName)
+          }
+
+          if (!dataA.isParent && dataB.isParent) {
+            // If A is a child of B, B comes first
+            if (dataA.parentId === dataB.metricId) return 1
+            // Otherwise, sort by metric name
+            return dataA.metricName.localeCompare(dataB.metricName)
+          }
+
+          return 0
         },
-        cellStyle: {
-          border: "1px solid #000000", // Black border for all cells
+      },
+      // Update other columns to handle hierarchy properly
+      {
+        headerName: "Metric Id",
+        field: "metricPrefix",
+        flex: 1,
+        filter: true,
+        cellRenderer: (params: any) => {
+          return params.data?.isParent ? params.value : ""
         },
-        headerClass: "custom-header",
+        comparator: (valueA: any, valueB: any, nodeA: any, nodeB: any) => {
+          const dataA = nodeA.data
+          const dataB = nodeB.data
+
+          // Maintain parent-child relationship
+          if (dataA.isParent === dataB.isParent && dataA.parentId === dataB.parentId) {
+            if (!valueA && !valueB) return 0
+            if (!valueA) return 1
+            if (!valueB) return -1
+            return valueA.localeCompare(valueB)
+          }
+
+          if (dataA.isParent && !dataB.isParent && dataB.parentId === dataA.metricId) return -1
+          if (!dataA.isParent && dataB.isParent && dataA.parentId === dataB.metricId) return 1
+
+          return 0
+        },
+      },
+      {
+        headerName: "Trigger",
+        field: "trigger",
+        flex: 1,
+        cellStyle: () => ({
+          textAlign: "center",
+          color: "green",
+        }),
+        valueFormatter: (params: any) => {
+          if (params.value === null) return "n/a"
+          if (!params.data?.isParent) return ""
+          return params.data.valueType === "%" ? `${params.value.toFixed(2)}%` : params.value.toFixed(2)
+        },
+        filter: true,
+        comparator: (valueA: any, valueB: any, nodeA: any, nodeB: any) => {
+          const dataA = nodeA.data
+          const dataB = nodeB.data
+
+          // Maintain parent-child relationship
+          if (dataA.isParent === dataB.isParent && dataA.parentId === dataB.parentId) {
+            if (valueA === null && valueB === null) return 0
+            if (valueA === null) return 1
+            if (valueB === null) return -1
+            return valueA - valueB
+          }
+
+          if (dataA.isParent && !dataB.isParent && dataB.parentId === dataA.metricId) return -1
+          if (!dataA.isParent && dataB.isParent && dataA.parentId === dataB.metricId) return 1
+
+          return 0
+        },
+      },
+      {
+        headerName: "Limit",
+        field: "limit",
+        flex: 1,
+        cellStyle: { textAlign: "center", color: "red" },
+        valueFormatter: (params: any) => {
+          if (params.value === null) return "n/a"
+          if (!params.data?.isParent) return ""
+          return params.data.valueType === "%" ? `${params.value.toFixed(2)}%` : params.value.toFixed(2)
+        },
+        filter: true,
+        comparator: (valueA: any, valueB: any, nodeA: any, nodeB: any) => {
+          const dataA = nodeA.data
+          const dataB = nodeB.data
+
+          // Maintain parent-child relationship
+          if (dataA.isParent === dataB.isParent && dataA.parentId === dataB.parentId) {
+            if (valueA === null && valueB === null) return 0
+            if (valueA === null) return 1
+            if (valueB === null) return -1
+            return valueA - valueB
+          }
+
+          if (dataA.isParent && !dataB.isParent && dataB.parentId === dataA.metricId) return -1
+          if (!dataA.isParent && dataB.isParent && dataA.parentId === dataB.metricId) return 1
+
+          return 0
+        },
       },
       {
         headerName: "Source",
         field: "source",
         flex: 1,
-        filter: "agTextColumnFilter",
-        cellRenderer: (params: ICellRendererParams) => {
-          const data = params.data as GridRowData
-          return data.isParent ? params.value : ""
+        filter: true,
+        cellRenderer: (params: any) => {
+          return params.data?.isParent ? params.value : ""
         },
-        cellStyle: {
-          border: "1px solid #000000", // Black border for all cells
+        comparator: (valueA: any, valueB: any, nodeA: any, nodeB: any) => {
+          const dataA = nodeA.data
+          const dataB = nodeB.data
+
+          // Maintain parent-child relationship
+          if (dataA.isParent === dataB.isParent && dataA.parentId === dataB.parentId) {
+            if (!valueA && !valueB) return 0
+            if (!valueA) return 1
+            if (!valueB) return -1
+            return valueA.localeCompare(valueB)
+          }
+
+          if (dataA.isParent && !dataB.isParent && dataB.parentId === dataA.metricId) return -1
+          if (!dataA.isParent && dataB.isParent && dataA.parentId === dataB.metricId) return 1
+
+          return 0
         },
-        headerClass: "custom-header",
       },
       ...monthColumns.map(({ month, result }) => ({
-        headerClass: "custom-header text-center",
-        headerName: month ? new Date(month).toLocaleDateString("en-US", { year: "numeric", month: "short" }) : "N/A",
+        headerClass: "text-center",
+        headerName: typeof month === "string" ? month.toUpperCase() : "N/A",
         field: result,
         flex: 1,
         cellStyle: (params: any) => {
-          const backgroundColor = getCellColor(params)
+          if (!params.data) return { backgroundColor: "white" }
+
+          const colorField = result.replace("_Result", "_Color")
+          const colorValue = params.data[colorField]?.toLowerCase()
+          const isParent = params.data.isParent
+
+          let bgColor = "white"
+          if (colorValue) {
+            switch (colorValue) {
+              case "red":
+                bgColor = isParent ? metricPerformanceColors.parent.bad : metricPerformanceColors.child.bad
+                break
+              case "green":
+                bgColor = isParent ? metricPerformanceColors.parent.good : metricPerformanceColors.child.good
+                break
+              case "amber":
+                bgColor = isParent ? metricPerformanceColors.parent.warning : metricPerformanceColors.child.warning
+                break
+              case "grey":
+              case "black":
+                bgColor = isParent ? metricPerformanceColors.parent.null : metricPerformanceColors.child.null
+                break
+              default:
+                bgColor = "white"
+            }
+          }
+
+          const isDarkBackground =
+            isParent && (colorValue === "red" || colorValue === "amber" || colorValue === "green")
 
           return {
             textAlign: "center",
-            backgroundColor: backgroundColor,
-            color: !params.value || params.value === "NDTR" ? "gray" : "black",
-            border: "1px solid #000000", // Black border for all cells
+            backgroundColor: bgColor,
+            color: isDarkBackground ? "#ffffff" : "#333333",
+            padding: "8px 4px",
+            minHeight: "40px",
           }
         },
         valueFormatter: (params: any) => {
           if (!params.value) return "NDTR"
           return params.value
         },
-        cellRenderer: (params: ICellRendererParams) => {
+        cellRenderer: (params: any) => {
           if (!params.value) return "NDTR"
           if (params.value === "NDTR") return params.value
 
@@ -654,36 +1155,23 @@ const MetricsGrid = ({ selectedMonth, selectedLeader, metricTypeId }: MetricsGri
 
           if (parts.length !== 3) return params.value
 
-          const data = params.data as GridRowData
           const [percentage, numerator, denominator] = parts
-          const isParent = data.isParent
+          const isParent = params.data.isParent
+          const colorField = result.replace("_Result", "_Color")
+          const colorValue = params.data[colorField]?.toLowerCase()
+          const isDarkBackground =
+            isParent && (colorValue === "red" || colorValue === "amber" || colorValue === "green")
 
-          // Get the cell color to determine text color
-          const colorField = params.column.getColId().replace("_Result", "_Color")
-          const cellColor = data[colorField]
-
-          // Determine if this is a light background cell
-          let isLightBg = true
-          if (typeof cellColor === "string") {
-            const color = cellColor.toLowerCase()
-            isLightBg =
-              color !== "#e61622" &&
-              color !== "red" &&
-              color !== "#009223" &&
-              color !== "green" &&
-              color !== "#ffbf00" &&
-              color !== "amber"
-          }
-
-          const formattedPercentage = Number.parseFloat(percentage).toFixed(2) + (data.valueType === "%" ? "%" : "")
+          const formattedPercentage =
+            Number.parseFloat(percentage).toFixed(2) + (params.data.valueType === "%" ? "%" : "")
           const formattedFraction = `${numerator}/${denominator}`
 
           return (
-            <div className="flex h-full flex-col items-center justify-center">
+            <div className="flex flex-col items-center justify-center h-full" style={{ minHeight: "40px" }}>
               <div
                 className="text-sm font-medium"
                 style={{
-                  color: isLightBg ? "#000000" : "#ffffff", // Black text for light backgrounds, white for dark
+                  color: isDarkBackground ? "#ffffff" : "#595959",
                 }}
               >
                 {formattedPercentage}
@@ -691,7 +1179,7 @@ const MetricsGrid = ({ selectedMonth, selectedLeader, metricTypeId }: MetricsGri
               <div
                 className="text-xs font-medium"
                 style={{
-                  color: isLightBg ? "#000000" : "#d9d9d9", // Black text for light backgrounds, light gray for dark
+                  color: isDarkBackground ? "rgba(255,255,255,0.8)" : "#7f7f7f",
                 }}
               >
                 {formattedFraction}
@@ -699,148 +1187,64 @@ const MetricsGrid = ({ selectedMonth, selectedLeader, metricTypeId }: MetricsGri
             </div>
           )
         },
-        filter: "agTextColumnFilter",
+        filter: true,
+        comparator: (valueA: any, valueB: any, nodeA: any, nodeB: any) => {
+          const dataA = nodeA.data
+          const dataB = nodeB.data
+
+          // Maintain parent-child relationship
+          if (dataA.isParent === dataB.isParent && dataA.parentId === dataB.parentId) {
+            if (!valueA && !valueB) return 0
+            if (!valueA) return 1
+            if (!valueB) return -1
+
+            // Extract percentage for comparison
+            const percentageA = valueA === "NDTR" ? -1 : Number.parseFloat(valueA.split("-")[0])
+            const percentageB = valueB === "NDTR" ? -1 : Number.parseFloat(valueB.split("-")[0])
+
+            return percentageA - percentageB
+          }
+
+          if (dataA.isParent && !dataB.isParent && dataB.parentId === dataA.metricId) return -1
+          if (!dataA.isParent && dataB.isParent && dataA.parentId === dataB.metricId) return 1
+
+          return 0
+        },
       })),
     ],
-    [monthColumns, expandedMetrics, isSltDataLoading, selectedMetricId, handleToggleRow, pendingAction],
+    [monthColumns, expandedMetrics, isLoading, selectedMetricId, handleRowClicked],
   )
 
-  const defaultColDef: ColDef = {
+  const defaultColDef = {
     sortable: true,
     filter: true,
     resizable: true,
-  }
-
-  useEffect(() => {
-    setIsGridMounted(true)
-  }, [])
-
-  // Add CSS for better horizontal scrolling and grid styling
-  useEffect(() => {
-    if (!isGridMounted) return
-    // Create a style element for grid styles
-    const styleElement = document.createElement("style")
-    styleElement.id = "grid-horizontal-scroll-styles"
-    styleElement.textContent = `
-    .ag-root-wrapper {
-      width: 100% !important;
-      overflow-x: auto;
-    }
-    .ag-center-cols-container {
-      width: 100% !important;
-      min-width: max-content;
-    }
-    .ag-header-container, .ag-center-cols-container, .ag-body-viewport {
-      width: 100% !important;
-    }
-    .ag-body-viewport {
-      overflow-x: auto !important;
-    }
-    .ag-header-cell {
-      border: 1px solid #000000 !important;
-    }
-    .ag-row {
-      border-color: #000000 !important;
-    }
-    .custom-header {
-      background-color: #012169 !important;
-      color: #FFFFFF !important;
-    }
-    .custom-header .ag-header-cell-text {
-      color: #FFFFFF !important;
-    }
-    .ag-header-cell-label {
-      color: #FFFFFF !important;
-    }
-    .custom-header .ag-header-icon {
-      color: #FFFFFF !important;
-      fill: #FFFFFF !important;
-    }
-
-    .custom-header .ag-icon {
-      color: #FFFFFF !important;
-      fill: #FFFFFF !important;
-    }
-
-    .ag-header-cell-menu-button .ag-icon-menu {
-      color: #FFFFFF !important;
-      fill: #FFFFFF !important;
-    }
-
-    .ag-header-cell-menu-button:hover {
-      background-color: rgba(255, 255, 255, 0.2) !important;
-    }
-
-    .ag-header-cell-menu-button {
-      opacity: 0.8;
-    }
-
-    .ag-header-cell-menu-button:hover {
-      opacity: 1;
-    }
-  `
-    document.head.appendChild(styleElement)
-
-    // Clean up on component unmount
-    return () => {
-      const existingStyle = document.getElementById("grid-horizontal-scroll-styles")
-      if (existingStyle) {
-        document.head.removeChild(existingStyle)
-      }
-    }
-  }, [isGridMounted])
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (gridApiRef.current) {
-        gridApiRef.current.sizeColumnsToFit()
-      }
-    }
-
-    window.addEventListener("resize", handleResize)
-
-    return () => {
-      window.removeEventListener("resize", handleResize)
-    }
-  }, [])
-
-  const onGridReady = useCallback((params: any) => {
-    gridApiRef.current = params.api
-  }, [])
-
-  const onFirstDataRendered = useCallback(() => {
-    if (gridApiRef.current) {
-      // Fit columns to their content
-      gridApiRef.current.sizeColumnsToFit()
-
-      // Ensure the grid fits its container
-      setTimeout(() => {
-        gridApiRef.current.sizeColumnsToFit()
-      }, 100)
-    }
-  }, [])
-
-  if (isLoading) {
-    return renderLoadingSpinner()
+    suppressMovable: false,
+    // Ensure consistent row heights
+    autoHeight: false,
   }
 
   return (
-    <div className="ag-theme-alpine w-full h-full">
-      <div className="w-full h-full overflow-auto scrollbar-hide">
-        <AgGridReact
-          key={`metrics-grid-${metricTypeId || "all"}`}
-          rowData={gridData}
-          columnDefs={columnDefs}
-          defaultColDef={defaultColDef}
-          getRowId={getRowId}
-          suppressRowTransform={true}
-          domLayout="autoHeight"
-          onGridReady={onGridReady}
-          onFirstDataRendered={onFirstDataRendered}
-        />
-      </div>
+    <div className="ag-theme-alpine h-[600px] w-full">
+      <AgGridReact
+        rowData={gridData}
+        columnDefs={columnDefs}
+        defaultColDef={defaultColDef}
+        getRowId={getRowId}
+        suppressRowTransform={true}
+        onRowClicked={handleRowClicked}
+        domLayout="autoHeight"
+        theme="legacy"
+        // Add these props to handle sorting and hierarchy better
+        deltaRowDataMode={true}
+        getRowHeight={(params) => {
+          // Ensure consistent row heights
+          return params.data?.isParent ? 48 : 44
+        }}
+        suppressSortWhenGrouping={false}
+        // Maintain selection and expansion state during sorting
+        suppressRowDeselection={true}
+      />
     </div>
   )
 }
-
-export default MetricsGrid

@@ -15,6 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
 
 type MetricTypeModel = {
   id?: number
@@ -135,23 +136,33 @@ export default function NonGreenMetrics({
             Metrics not meeting target performance (Red and Amber) with month-over-month trend.
           </CardDescription>
         </div>
-        <div className="w-[180px]">
-          <Select value={localSelectedMetricType?.toString() || "all"} onValueChange={handleMetricTypeChange}>
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select metric type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectGroup>
-                <SelectLabel>Metric Types</SelectLabel>
-                <SelectItem value="all">All Types</SelectItem>
-                {metricTypes.map((type) => (
-                  <SelectItem key={type.id} value={type.id.toString()}>
-                    {type.name}
-                  </SelectItem>
-                ))}
-              </SelectGroup>
-            </SelectContent>
-          </Select>
+        <div className="w-[320px]">
+          <div className="space-y-2">
+            <div className="flex items-center gap-3">
+              <Label htmlFor="metric-type-select" className="whitespace-nowrap text-sm font-medium">
+                Filter by Metric Type:
+              </Label>
+              <Select value={localSelectedMetricType?.toString() || "all"} onValueChange={handleMetricTypeChange}>
+                <SelectTrigger id="metric-type-select" className="w-full">
+                  <SelectValue placeholder="Select metric type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Metric Types</SelectLabel>
+                    <SelectItem value="all">All Types</SelectItem>
+                    {metricTypes.map((type) => (
+                      <SelectItem key={type.id} value={type.id.toString()}>
+                        {type.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              Select a specific metric type to filter the non-green metrics displayed below.
+            </p>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
